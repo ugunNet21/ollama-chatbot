@@ -3,6 +3,14 @@
 ## About
 This is a chat bot application powered by Ollama, designed to provide an interactive conversational experience using various AI models.
 
+## Screenshoot
+
+<p float="left">
+  <img src="public/assets/images/chat-1.png" width="30%" />
+  <img src="public/assets/images/chat-2.png" width="30%" />
+  <img src="public/assets/images/chat-3.png" width="30%" />
+</p>
+
 ## Installation
 
 To set up the application, follow these steps:
