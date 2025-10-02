@@ -9,15 +9,40 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>Login to Chat</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="usernameInput">Username</label>
+                    <input type="text" id="usernameInput" placeholder="Enter your username" required>
+                </div>
+                <button type="submit" class="btn-primary">Login</button>
+            </form>
+        </div>
+    </div>
+
     <div class="app-container">
         <div class="sidebar">
             <div class="sidebar-header">
                 <h2><i class="fas fa-robot"></i> Ollama Chat</h2>
+                <div class="user-info">
+                    <span id="currentUser"></span>
+                    <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
             </div>
+            
+            <div class="chat-history-section">
+                <h3>Chat History</h3>
+                <div class="chat-history-list" id="chatHistoryList"></div>
+            </div>
+            
             <div class="model-section">
                 <h3>Model AI</h3>
                 <div class="model-list" id="modelList"></div>
             </div>
+            
             <div class="model-info" id="modelInfo">
                 <h4>Info Model</h4>
                 <p id="modelDetails">Pilih model untuk melihat detail</p>
@@ -26,6 +51,7 @@
         
         <div class="chat-container">
             <div class="chat-header">
+                <div class="chat-title" id="chatTitle">New Chat</div>
                 <div class="model-selector">
                     <i class="fas fa-brain"></i>
                     <span id="currentModel">gemma3:1b</span>
@@ -42,17 +68,7 @@
             </div>
             
             <div class="chat-messages" id="chatMessages">
-                <div class="message bot-message">
-                    <div class="message-content">
-                        <div class="message-avatar">
-                            <i class="fas fa-robot"></i>
-                        </div>
-                        <div class="message-text">
-                            Halo! Saya adalah asisten AI. Anda dapat mengirimkan teks atau upload file untuk saya analisis. Ada yang bisa saya bantu?
-                        </div>
-                    </div>
-                    <div class="message-time">Baru saja</div>
-                </div>
+                <!-- Messages will be loaded here -->
             </div>
             
             <div class="chat-input-container">

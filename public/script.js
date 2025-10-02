@@ -11,12 +11,202 @@ document.addEventListener('DOMContentLoaded', () => {
         currentModelMobile: document.getElementById('currentModelMobile'),
         modelDetails: document.getElementById('modelDetails'),
         clearChat: document.getElementById('clearChat'),
-        newChat: document.getElementById('newChat')
+        newChat: document.getElementById('newChat'),
+        loginModal: document.getElementById('loginModal'),
+        loginForm: document.getElementById('loginForm'),
+        usernameInput: document.getElementById('usernameInput'),
+        chatHistoryList: document.getElementById('chatHistoryList'),
+        chatTitle: document.getElementById('chatTitle')
     };
 
     let selectedModel = 'gemma3:1b';
     let isLoading = false;
     let attachedFile = null;
+    let currentUser = null;
+    let authToken = null;
+    let currentChatId = null;
+    let chatHistories = [];
+
+    // Check if user is logged in
+    function checkAuthStatus() {
+        const token = localStorage.getItem('authToken');
+        const user = localStorage.getItem('currentUser');
+        
+        if (token && user) {
+            authToken = token;
+            currentUser = JSON.parse(user);
+            elements.loginModal.style.display = 'none';
+            loadChatHistories();
+            // Jangan otomatis membuat chat baru di sini
+        } else {
+            elements.loginModal.style.display = 'flex';
+        }
+    }
+
+    // Login form submission
+    elements.loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = elements.usernameInput.value.trim();
+        
+        if (!username) return;
+        
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username })
+            });
+            
+            const data = await response.json();
+            
+            if (data.user && data.token) {
+                currentUser = data.user;
+                authToken = data.token;
+                localStorage.setItem('authToken', data.token);
+                localStorage.setItem('currentUser', JSON.stringify(data.user));
+                elements.loginModal.style.display = 'none';
+                loadChatHistories();
+                createNewChat();
+            } else {
+                alert('Login failed');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            alert('Login failed');
+        }
+    });
+
+    // Create new chat
+    async function createNewChat() {
+        try {
+            const response = await fetch('/api/chats', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify({ title: 'New Chat' })
+            });
+            
+            if (response.ok) {
+                const chat = await response.json();
+                currentChatId = chat.id;
+                elements.messages.innerHTML = '';
+                addMessage('Halo! Saya adalah asisten AI. Ada yang bisa saya bantu?', false);
+                loadChatHistories();
+            } else {
+                const error = await response.json();
+                alert('Failed to create new chat: ' + error.error);
+            }
+        } catch (error) {
+            console.error('Create chat error:', error);
+            alert('Failed to create new chat');
+        }
+    }    
+
+    // Load chat histories
+    async function loadChatHistories() {
+        try {
+            const response = await fetch('/api/chats', {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            
+            if (response.ok) {
+                chatHistories = await response.json();
+                renderChatHistories();
+                
+                // Jika tidak ada chat history, buat yang baru
+                if (chatHistories.length === 0) {
+                    createNewChat();
+                } else if (!currentChatId) {
+                    // Jika ada chat history tapi tidak ada currentChatId, pilih yang pertama
+                    loadChat(chatHistories[0].id);
+                }
+            }
+        } catch (error) {
+            console.error('Load chat histories error:', error);
+        }
+    }
+
+    // Render chat histories
+    function renderChatHistories() {
+        elements.chatHistoryList.innerHTML = '';
+        
+        chatHistories.forEach(chat => {
+            const item = document.createElement('div');
+            item.className = `chat-history-item ${chat.id === currentChatId ? 'active' : ''}`;
+            item.innerHTML = `
+                <div class="chat-history-title">${chat.title}</div>
+                <div class="chat-history-actions">
+                    <button class="delete-chat" data-id="${chat.id}"><i class="fas fa-trash"></i></button>
+                </div>
+            `;
+            
+            item.addEventListener('click', (e) => {
+                if (!e.target.closest('.delete-chat')) {
+                    loadChat(chat.id);
+                }
+            });
+            
+            elements.chatHistoryList.appendChild(item);
+        });
+        
+        // Add delete event listeners
+        document.querySelectorAll('.delete-chat').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const chatId = btn.getAttribute('data-id');
+                
+                if (confirm('Are you sure you want to delete this chat?')) {
+                    try {
+                        const response = await fetch(`/api/chats/${chatId}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${authToken}` }
+                        });
+                        
+                        if (response.ok) {
+                            if (chatId === currentChatId) {
+                                createNewChat();
+                            } else {
+                                loadChatHistories();
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Delete chat error:', error);
+                    }
+                }
+            });
+        });
+    }
+
+    // Load specific chat
+    async function loadChat(chatId) {
+        try {
+            const response = await fetch(`/api/chats/${chatId}/messages`, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            
+            if (response.ok) {
+                const messages = await response.json();
+                currentChatId = chatId;
+                elements.messages.innerHTML = '';
+                
+                messages.forEach(msg => {
+                    addMessage(msg.content, msg.role === 'user');
+                });
+                
+                // Update chat title
+                const chat = chatHistories.find(c => c.id === chatId);
+                if (chat) {
+                    elements.chatTitle.textContent = chat.title;
+                }
+                
+                renderChatHistories();
+            }
+        } catch (error) {
+            console.error('Load chat error:', error);
+        }
+    }
 
     // Parse markdown dengan copy button
     function parseMarkdown(text) {
@@ -149,7 +339,13 @@ document.addEventListener('DOMContentLoaded', () => {
     async function sendMessage() {
         const message = elements.input.value.trim();
         if (!message && !attachedFile) return;
-
+        
+        // Pastikan currentChatId valid
+        if (!currentChatId) {
+            alert('Please start a new chat first');
+            return;
+        }
+    
         // Tampilkan pesan user dengan file info jika ada
         let userMessage = message;
         if (attachedFile) {
@@ -161,18 +357,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (userMessage) addMessage(userMessage, true);
-
+    
         elements.input.value = '';
         elements.input.style.height = 'auto';
         
         showLoading();
-
+    
         try {
             const payload = {
                 message: message || 'Analisis file ini secara detail',
                 model: selectedModel
             };
-
+    
             // PENTING: Kirim file content ke backend
             if (attachedFile) {
                 if (attachedFile.content) {
@@ -185,31 +381,60 @@ document.addEventListener('DOMContentLoaded', () => {
                     payload.fileName = attachedFile.fileName;
                 }
             }
-
-            const response = await fetch('/api/chat', {
+    
+            const response = await fetch(`/api/chats/${currentChatId}/messages`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
                 body: JSON.stringify(payload)
             });
-
+    
             const data = await response.json();
             hideLoading();
-
+    
             if (data.error) {
                 addMessage(`❌ Error: ${data.error}`, false);
             } else {
                 addMessage(data.reply, false, 'markdown');
+                
+                // Update chat title if it's the first message
+                const chatMessages = elements.messages.querySelectorAll('.message');
+                if (chatMessages.length <= 3) { // 1 bot message + 1 user message + 1 bot response
+                    updateChatTitle(message.substring(0, 30) + (message.length > 30 ? '...' : ''));
+                }
             }
-
+    
             // Reset attached file
             attachedFile = null;
             const preview = document.querySelector('.file-preview');
             if (preview) preview.remove();
-
+    
         } catch (error) {
             console.error('Error:', error);
             hideLoading();
             addMessage('❌ Maaf, terjadi kesalahan. Silakan coba lagi.', false);
+        }
+    }
+    
+
+    // Update chat title
+    async function updateChatTitle(title) {
+        try {
+            await fetch(`/api/chats/${currentChatId}/title`, {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify({ title })
+            });
+            
+            elements.chatTitle.textContent = title;
+            loadChatHistories();
+        } catch (error) {
+            console.error('Update chat title error:', error);
         }
     }
 
@@ -264,18 +489,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     elements.clearChat.addEventListener('click', () => {
-        elements.messages.innerHTML = `
-            <div class="message bot-message">
-                <div class="message-content">
-                    <div class="message-avatar"><i class="fas fa-robot"></i></div>
-                    <div class="message-text">Chat dihapus. Ada yang bisa saya bantu?</div>
-                </div>
-                <div class="message-time">Baru saja</div>
-            </div>
-        `;
+        if (confirm('Are you sure you want to clear the current chat?')) {
+            createNewChat();
+        }
     });
 
-    elements.newChat.addEventListener('click', () => elements.clearChat.click());
+    elements.newChat.addEventListener('click', () => {
+        createNewChat();
+    });
 
     // Load models
     async function loadModels() {
@@ -331,5 +552,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Initialize app
+    checkAuthStatus();
     loadModels();
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('currentUser');
+        currentUser = null;
+        authToken = null;
+        currentChatId = null;
+        chatHistories = [];
+        elements.loginModal.style.display = 'flex';
+        elements.messages.innerHTML = '';
+    });
 });
