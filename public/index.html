@@ -1,6 +1,6 @@
+<!--public/index.html-->
 <!DOCTYPE html>
 <html lang="id">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-
 <body>
     <div class="app-container">
         <div class="sidebar">
@@ -17,16 +16,14 @@
             </div>
             <div class="model-section">
                 <h3>Model AI</h3>
-                <div class="model-list" id="modelList">
-                    <!-- Model akan diisi secara dinamis -->
-                </div>
+                <div class="model-list" id="modelList"></div>
             </div>
             <div class="model-info" id="modelInfo">
                 <h4>Info Model</h4>
                 <p id="modelDetails">Pilih model untuk melihat detail</p>
             </div>
         </div>
-
+        
         <div class="chat-container">
             <div class="chat-header">
                 <div class="model-selector">
@@ -43,7 +40,7 @@
                     </button>
                 </div>
             </div>
-
+            
             <div class="chat-messages" id="chatMessages">
                 <div class="message bot-message">
                     <div class="message-content">
@@ -51,17 +48,21 @@
                             <i class="fas fa-robot"></i>
                         </div>
                         <div class="message-text">
-                            Halo! Saya adalah asisten AI. Ada yang bisa saya bantu?
+                            Halo! Saya adalah asisten AI. Anda dapat mengirimkan teks atau upload file untuk saya analisis. Ada yang bisa saya bantu?
                         </div>
                     </div>
                     <div class="message-time">Baru saja</div>
                 </div>
             </div>
-
+            
             <div class="chat-input-container">
                 <div class="input-wrapper">
-                    <textarea id="messageInput" placeholder="Ketik pesan Anda..." rows="1"></textarea>
-                    <button id="sendButton" class="send-button">
+                    <input type="file" id="fileInput" style="display: none;" accept=".txt,.md,.csv,.json,.xml,.jpg,.jpeg,.png,.gif,.webp,.js,.ts,.jsx,.tsx,.py,.java,.php,.cpp,.c,.rb,.go,.rs">
+                    <button id="fileButton" class="file-button" title="Upload File">
+                        <i class="fas fa-paperclip"></i>
+                    </button>
+                    <textarea id="messageInput" placeholder="Ketik pesan atau upload file..." rows="1"></textarea>
+                    <button id="sendButton" class="send-button" title="Kirim">
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
@@ -75,5 +76,4 @@
 
     <script src="script.js"></script>
 </body>
-
 </html>
